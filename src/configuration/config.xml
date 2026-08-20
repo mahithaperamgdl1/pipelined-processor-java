@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <Configuration>
 	<FunctionalUnits>
 		<ALU>
@@ -8,12 +8,12 @@
 		</ALU>
 		<Multiplier>
 			<Count>1</Count>
-			<Latency>4</Latency>
+			<Latency>1</Latency>
 			<ReciprocalOfThroughput>1</ReciprocalOfThroughput>
 		</Multiplier>
 		<Divider>
 			<Count>1</Count>
-			<Latency>10</Latency>
+			<Latency>1</Latency>
 			<ReciprocalOfThroughput>1</ReciprocalOfThroughput>
 		</Divider>
 	</FunctionalUnits>
@@ -21,21 +21,21 @@
 	<L1iCache>
 		<NumberOfLines>256</NumberOfLines>
 		<Latency>2</Latency>
-		<Associativity>4</Associativity>
+		<Associativity>2</Associativity>
 		<ReplacementPolicy>LRU</ReplacementPolicy>
 	</L1iCache>
 	
 	<L1dCache>
 		<NumberOfLines>256</NumberOfLines>
 		<Latency>2</Latency>
-		<Associativity>4</Associativity>
+		<Associativity>2</Associativity>
 		<ReplacementPolicy>LRU</ReplacementPolicy>
 	</L1dCache>
 	
 	<L2Cache>
 		<NumberOfLines>2048</NumberOfLines>
 		<Latency>10</Latency>
-		<Associativity>4</Associativity>
+		<Associativity>2</Associativity>
 		<ReplacementPolicy>LRU</ReplacementPolicy>
 	</L2Cache>
 	

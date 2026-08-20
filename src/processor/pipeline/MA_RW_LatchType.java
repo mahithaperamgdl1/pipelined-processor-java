@@ -1,75 +1,28 @@
 package processor.pipeline;
 
+import generic.Instruction;
+
 public class MA_RW_LatchType {
-	
+
 	boolean RW_enable;
+	Instruction instruction;
+	int aluResult;
 	int ldResult;
-	int instruction;
-	int AluResult;
-	int currentPC;
+	boolean RW_Lock;
 
-	public int getCurrentPC() {
-		return currentPC;
-	}
-
-	public void setCurrentPC(int currentPC) {
-		this.currentPC = currentPC;
-	}
-
-	//MODIFICATIONS FOR PIPELINING - STARTS
-	boolean nop;
-	int current_rd=-1;
-	int next_rd=-1;
-
-
-	public boolean isNop() {
-		return nop;
-	}
-
-	public void setNop(boolean nop) {
-		this.nop = nop;
-	}
-
-	public int getCurrent_rd() {
-		return current_rd;
-	}
-
-	public void setCurrent_rd(int Current_rd) {
-		this.current_rd = Current_rd;
-	}	
-
-	public int getNext_rd() {
-		return next_rd;
-	}
-
-	public void setNext_rd(int Next_rd) {
-		this.next_rd = Next_rd;	
-	//MODIFICATIONS FOR PIPELINING - ENDS
-	
-	boolean RW_busy;
-
-	public boolean isRW_busy() {
-		return RW_busy;
-	}
-
-	public void setRW_busy(boolean mA_busy) {
-		RW_busy = mA_busy;
-	}
-
-	boolean RW_stall;
-
-	public boolean isRW_stall() {
-		return RW_stall;
-	}
-
-	public void setRW_stall(boolean mA_stall) {
-		RW_stall = mA_stall;
-	}
-	
-	public MA_RW_LatchType()
-	{
+	public MA_RW_LatchType() {
 		RW_enable = false;
-		RW_stall = false;
+		RW_Lock = false;
+	}
+
+	// getting value load value from MA unit
+	public void setLdResult(int ld_Result) {
+		this.ldResult = ld_Result;
+	}
+
+	// RW unit uses this function to get load value
+	public int getLdResult() {
+		return this.ldResult;
 	}
 
 	public boolean isRW_enable() {
@@ -80,27 +33,32 @@ public class MA_RW_LatchType {
 		RW_enable = rW_enable;
 	}
 
-	public int getLdResult() {
-		return ldResult;
+	// set aluresult
+	public void setAluResult(int Alu_result) {
+		this.aluResult = Alu_result;
 	}
 
-	public void setLdResult(int ldResult) {
-		this.ldResult = ldResult;
-	}
-
+	// function to get aluresult
 	public int getAluResult() {
-		return AluResult;
+		return this.aluResult;
 	}
 
-	public void setAluResult(int aluResult) {
-		AluResult = aluResult;
-	}
-
-	public int getInstruction() {
-		return instruction;
-	}
-
-	public void setInstruction(int instruction) {
+	// set instructions
+	public void setInstruction(Instruction instruction) {
 		this.instruction = instruction;
 	}
+
+	// function to get instructions
+	public Instruction getInstruction() {
+		return this.instruction;
+	}
+
+	public boolean isRW_Lock() {
+		return RW_Lock;
+	}
+
+	public void setRW_Lock(boolean rW_Lock) {
+		this.RW_Lock = rW_Lock;
+	}
+
 }

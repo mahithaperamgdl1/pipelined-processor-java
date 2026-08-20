@@ -1,25 +1,12 @@
 package processor.pipeline;
 
 public class IF_EnableLatchType {
-	
+
 	boolean IF_enable;
-	boolean IF_busy;
-	
-	boolean nop ;
+	boolean isIF_Busy;
 
-	public boolean isNop() {
-		return nop;
-	}
-
-	public void setNop(boolean nop) {
-		this.nop = nop;
-	}	
-
-	public IF_EnableLatchType()
-	{
+	public IF_EnableLatchType() {
 		IF_enable = true;
-		IF_busy = false;
-		nop = false;
 	}
 
 	public boolean isIF_enable() {
@@ -29,11 +16,12 @@ public class IF_EnableLatchType {
 	public void setIF_enable(boolean iF_enable) {
 		IF_enable = iF_enable;
 	}
-	public boolean isIF_busy() {
-		return IF_busy;
+
+	public boolean isIF_Busy() {
+		return isIF_Busy;
 	}
 
-	public void setIF_busy(boolean iF_busy) {
-		IF_busy = iF_busy;
+	public void setIF_Busy(boolean if_busy) {
+		isIF_Busy = if_busy;
 	}
 }

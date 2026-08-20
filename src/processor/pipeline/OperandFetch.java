@@ -1,316 +1,349 @@
 package processor.pipeline;
 
+import generic.Instruction;
+import generic.Operand;
+import generic.Statistics;
+
 import processor.Processor;
+import java.util.*;
+import generic.*;
+import configuration.Configuration;
+import generic.Instruction.OperationType;
 
 public class OperandFetch {
 	Processor containingProcessor;
 	IF_OF_LatchType IF_OF_Latch;
 	OF_EX_LatchType OF_EX_Latch;
-	
-	//FOR PIPELINING - START
-	IF_EnableLatchType IF_EnableLatch;
 	EX_MA_LatchType EX_MA_Latch;
 	MA_RW_LatchType MA_RW_Latch;
-	//FOR PIPELINING - END
-	
+	IF_EnableLatchType IF_EnableLatch;
 
-	public OperandFetch(Processor containingProcessor, IF_OF_LatchType iF_OF_Latch, OF_EX_LatchType oF_EX_Latch, IF_EnableLatchType iF_EnableLatch, EX_MA_LatchType eX_MA_Latch, MA_RW_LatchType mA_RW_Latch)
-	{
+	public OperandFetch(Processor containingProcessor, IF_OF_LatchType iF_OF_Latch, OF_EX_LatchType oF_EX_Latch,
+			EX_MA_LatchType eX_MA_Latch, MA_RW_LatchType mA_RW_Latch, IF_EnableLatchType iF_EnableLatch) {
 		this.containingProcessor = containingProcessor;
 		this.IF_OF_Latch = iF_OF_Latch;
 		this.OF_EX_Latch = oF_EX_Latch;
-
-		//FOR PIPELINING - START
-		this.IF_EnableLatch = iF_EnableLatch;
 		this.EX_MA_Latch = eX_MA_Latch;
 		this.MA_RW_Latch = mA_RW_Latch;
-		//FOR PIPELINING - END
-
+		this.IF_EnableLatch = iF_EnableLatch;
 	}
-	
-	public void performOF()
-	{
-		System.out.println("\nPERFORMING OF");
 
-		if(IF_OF_Latch.isOF_stall())
-		{
-			//System.out.println("STALL due to IF MemoryFetch Event");
-			OF_EX_Latch.setEX_stall(true);
-			return;
+	public static String twoscomplement(StringBuffer str) {
+		int n = str.length();
+
+		int i;
+		for (i = n - 1; i >= 0; i--)
+			if (str.charAt(i) == '1')
+				break;
+
+		if (i == -1)
+			return "1" + str;
+
+		for (int k = i - 1; k >= 0; k--) {
+			if (str.charAt(k) == '1')
+				str.replace(k, k + 1, "0");
+			else
+				str.replace(k, k + 1, "1");
 		}
-		else
-		{
-			//System.out.println("NO STALL");
-			OF_EX_Latch.setEX_stall(false);
+
+		return str.toString();
+	}
+
+	public static String toBinary(int x, int len) {
+		if (len > 0) {
+			return String.format("%" + len + "s",
+					Integer.toBinaryString(x)).replace(" ", "0");
 		}
+		return null;
+	}
 
-		if(OF_EX_Latch.isEX_busy())
-		{
-			//IF_OF_Latch.setOF_busy(true);
-			System.out.println("OF IS BUSY");
-
-			return;
+	public static int toInteger(String binary) {
+		if (binary.charAt(0) == '1') {
+			StringBuffer bufferBinary = new StringBuffer();
+			bufferBinary.append(binary);
+			binary = "-" + twoscomplement(bufferBinary);
+		} else {
+			binary = "+" + binary;
 		}
-		else
-		{
-			//System.out.println("OF NOT BUSY");
-			IF_OF_Latch.setOF_busy(false);
-		}
-		
-		if(IF_OF_Latch.isOF_enable())
-		{
+		return Integer.parseInt(binary, 2);
+	}
 
-			if(IF_OF_Latch.isNop())
-			{
-				System.out.println("nop in OF");
+	public void conflictObserved() {
+		IF_EnableLatch.setIF_enable(false);
+		OF_EX_Latch.setEX_Lock(true);
+	}
 
-				OF_EX_Latch.setNop(true);
-				IF_OF_Latch.setNop(false);
-				return;
-			}
+	public boolean isDataHazard(int rs1, int rs2) {
 
-			//TODO
-			//FETCHING currentPC & INSTRUCTION
-			// int currentPC = containingProcessor.getRegisterFile().getProgramCounter();
-			int currentPC = IF_OF_Latch.getCurrentPC();
-			int instruction = IF_OF_Latch.getInstruction();
-			OF_EX_Latch.setInstruction(instruction);
+		boolean result;
 
-			//PRINTING THE INSTRUCTION & PC FOR DEBUGGING
-			int instruct = IF_OF_Latch.getInstruction();
+		// Creating Conflict Operations Set
+		Set<String> hazardInstructions = new HashSet<String>();
+		// Adding Instructions that can cause conflict
+		hazardInstructions.add("add");
+		hazardInstructions.add("addi");
+		hazardInstructions.add("sub");
+		hazardInstructions.add("subi");
+		hazardInstructions.add("mul");
+		hazardInstructions.add("muli");
+		hazardInstructions.add("div");
+		hazardInstructions.add("divi");
+		hazardInstructions.add("and");
+		hazardInstructions.add("andi");
+		hazardInstructions.add("or");
+		hazardInstructions.add("ori");
+		hazardInstructions.add("xor");
+		hazardInstructions.add("xori");
+		hazardInstructions.add("slt");
+		hazardInstructions.add("slti");
+		hazardInstructions.add("sll");
+		hazardInstructions.add("slli");
+		hazardInstructions.add("srl");
+		hazardInstructions.add("srli");
+		hazardInstructions.add("sra");
+		hazardInstructions.add("srai");
+		hazardInstructions.add("load");
+		hazardInstructions.add("store");
 
-			System.out.println("INSTRUCTION AVAILABLE IN IF-OF LATCH" + instruct);
+		// Creating set of division instructions
+		Set<String> DivisionInstructions = new HashSet<String>();
+		// Adding the division instructions
+		DivisionInstructions.add("div");
+		DivisionInstructions.add("divi");
 
-			String binaryString = Integer.toBinaryString(instruction);
-			while(binaryString.length() < 32)
-			{
-				binaryString = "0" + binaryString;
-			}
-			String byte1 = binaryString.substring(0, 8);
-			String byte2 = binaryString.substring(8, 16);
-			String byte3 = binaryString.substring(16, 24);
-			String byte4 = binaryString.substring(24, 32);
-			
-			System.out.println("Instruction in OF: " + byte1 + " " + byte2 + " " + byte3 + " " + byte4);
-			System.out.println("Instruction: " + instruction);
-			System.out.println("PC: " + currentPC);
-			//DEBUGGING SECTION ENDS
+		Instruction EX_Stage_Ins = OF_EX_Latch.getInstruction();
+		Instruction MA_Stage_Ins = EX_MA_Latch.getInstruction();
+		Instruction RW_Stage_Ins = MA_RW_Latch.getInstruction();
 
-			//
-			//CALCULATING IMMEDIATE VALUE AS immx
-			int immx = instruction & 0x0001ffff;
-			OF_EX_Latch.setImmx(immx);
+		// Conflict check due to RAW Hazard
+		int ex_rd = -1;
+		int ma_rd = -1;
+		int rw_rd = -1;
+		boolean ex_div = false;
+		boolean ma_div = false;
+		boolean rw_div = false;
 
-			//CALCULATING branchTarget = currentPC + offset
-			int offset=0;
-			int isJmp = 0;
-			int opcode = instruction >>> 27;
-
-			//HANDLING - END - DISABLING IF & OF - STARTS
-			switch (opcode)
-			{
-				case 29:
-					System.out.println("HANDLING: end");
-					// end INSTRUCTION
-					// Simulator.setSimulationComplete(true);
-					IF_EnableLatch.setIF_enable(false);
-					IF_OF_Latch.setOF_enable(false);
-					// OF_EX_Latch.setEX_enable(false);
-				default:
-					break;
-			}
-			//HANDLING - END - DISABLING IF & OF - ENDS
-
-			isJmp = (opcode == 24) ? 1 : 0;
-
-			if(isJmp == 1)
-			{
-				// System.out.println("Executing: jump");
-				//registerNumber IS STORED IN instruction[6:10]
-				int registerNumber = (instruction << 5 & 0xf8000000) >>> 27;
-				int isRegister =  (registerNumber == 0) ? 0 : 1;
-				// System.out.println("Register number: " + registerNumber);
-
-				if(isRegister == 1)
-				{
-					// System.out.println("isRegister");
-					offset = containingProcessor.getRegisterFile().getValue(registerNumber);
-				} else {
-					//offset IS STORED IN instruction[11:32]
-					// System.out.println("isImmediate");
-					offset = instruction & 0x003fffff;
-					offset = offset << 10 >> 10;
+		if (RW_Stage_Ins != null) {
+			String ins = RW_Stage_Ins.getOperationType().name();
+			if (hazardInstructions.contains(ins)) {
+				if (RW_Stage_Ins.getDestinationOperand() != null) {
+					rw_rd = RW_Stage_Ins.getDestinationOperand().getValue();
 				}
+				if (DivisionInstructions.contains(ins)) {
+					rw_div = true;
+				}
+			}
+		}
+
+		if (MA_Stage_Ins != null) {
+			String ins = MA_Stage_Ins.getOperationType().name();
+			if (hazardInstructions.contains(ins)) {
+				if (MA_Stage_Ins.getDestinationOperand() != null) {
+					ma_rd = MA_Stage_Ins.getDestinationOperand().getValue();
+				}
+				if (DivisionInstructions.contains(ins)) {
+					ma_div = true;
+				}
+			}
+		}
+
+		if (EX_Stage_Ins != null) {
+			String ins = EX_Stage_Ins.getOperationType().name();
+			if (hazardInstructions.contains(ins)) {
+				if (EX_Stage_Ins.getDestinationOperand() != null) {
+					ex_rd = EX_Stage_Ins.getDestinationOperand().getValue();
+				}
+				if (DivisionInstructions.contains(ins)) {
+					ex_div = true;
+				}
+			}
+		}
+
+		if (rs1 == ex_rd || rs1 == ma_rd || rs1 == rw_rd || rs2 == ex_rd || rs2 == ma_rd || rs2 == rw_rd) {
+			result = true;
+		} else {
+			result = false;
+		}
+
+		// Conflict check due to Division
+		if (ex_div || ma_div || rw_div) {
+			if (rs1 == 31 || rs2 == 31) {
+				result = true;
+			} else if (!result) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	public void performOF() {
+		if (!IF_OF_Latch.isOF_Busy()) {
+			if (IF_EnableLatch.isIF_Busy()) {
+				OF_EX_Latch.setEX_Busy(true);
 			} else {
-				// System.out.println("Executing: branch");
-				offset = (instruction & 0x0001ffff) << 15 >> 15;
-			}
-			// System.out.println("Offset: " + offset);
+				if (IF_OF_Latch.isOF_enable()) {
 
-			//CALCULATING branchTarget = currentPC + offset
-			int branchTarget = currentPC + offset;
-			// System.out.println("currentPC = " + currentPC);
-			// System.out.println("Branch Target: " + branchTarget);
+					int Instruction = IF_OF_Latch.getInstruction();
+					int currentPC = containingProcessor.getRegisterFile().getProgramCounter() -
+							1;
+					String binaryInstruction = toBinary(Instruction, 32);
 
-			OF_EX_Latch.setBranchTarget(branchTarget);
-			OF_EX_Latch.setCurrentPC(currentPC);
-			//CALCULATING THE REGISTER NUMBERS rs1 & rs2 FROM instruction[6:10] & instruction[11:15] RESPECTIVELY
-			int rs1 = 0;
-			rs1 = (instruction << 5 & 0xf8000000) >>> 27;
+					OperationType[] operationTypes = OperationType.values();
+					int opCodeInt = Integer.parseInt(binaryInstruction.substring(0, 5), 2);
+					OperationType CO = operationTypes[opCodeInt];
 
-			int rs2 = 0;
-			rs2 = (instruction << 10 & 0xf8000000) >>> 27;	
+					Instruction CI = new Instruction();
+					Operand rs1 = new Operand();
+					Operand rs2 = new Operand();
+					Operand rd = new Operand();
+					Operand jump = new Operand();
+					Operand imm = new Operand();
+					int registerSource1 = -1;
+					int registerSource2 = -1;
+					int registerDestination = -1;
+					int immediate = -1;
+					CI.setProgramCounter(currentPC);
+					CI.setOperationType(CO);
 
-			// System.out.println("rs1 = " + rs1 + " rs2 = " + rs2);
-			
-			//FETCHING THE VALUES OF THE REGISTERS rs1 & rs2 AS op1 & op2 RESPECTIVELY
-			int op1 = containingProcessor.getRegisterFile().getValue(rs1);
-			OF_EX_Latch.setOp1(op1);
+					// Creating set of branch instructions
+					Set<String> BranchInstructions = new HashSet<String>();
+					// Adding the branch instructions
+					BranchInstructions.add("jmp");
+					BranchInstructions.add("beq");
+					BranchInstructions.add("bne");
+					BranchInstructions.add("blt");
+					BranchInstructions.add("bgt");
 
-			int op2 = containingProcessor.getRegisterFile().getValue(rs2);
-			OF_EX_Latch.setOp2(op2);
-
-			System.out.println("op1 = " + op1 + " op2 = " + op2);
-
-			//CORRECTING RS1 AND RS2 FOR DATA HAZARD
-			//R3-TYPE: rs1: [1:5], rs2: [6:10] and rd: [11:15]
-			//R2I-TYPE: rs1: [1:5], rd: [6:10] from (opcode = 0) to (opcode = 22, load) for store(both are source registers)
-
-			if(opcode >= 0 && opcode <= 22)
-			{
-				if(opcode % 2 == 1)
-				{
-					rs2 = -2;
-				}
-			}
-
-			System.out.println("rd in EX: " + OF_EX_Latch.getCurrent_rd());
-			System.out.println("rd in MA: " + EX_MA_Latch.getCurrent_rd());
-			System.out.println("rd in RW: " + MA_RW_Latch.getCurrent_rd());
-			System.out.println("rs1 in OF: " + rs1);
-			System.out.println("rs2 in OF: " + rs2);
-
-			//DATA HAZARD - STALL OF - STARTS
-			int rd = -1;
-
-			OF_EX_Latch.setCurrent_rd(OF_EX_Latch.getNext_rd());
-			if (OF_EX_Latch.getCurrent_rd() == rs1 || OF_EX_Latch.getCurrent_rd() == rs2)
-			{
-				System.out.println("rd in EX = rs1/rs2 in OF");
-				
-				OF_EX_Latch.setNop(true);
-				// IF_OF_Latch.setOF_enable(false);
-				IF_EnableLatch.setIF_enable(false);
-
-				// OF_EX_Latch.setRd(-1);
-				//FOR STOPPING IF EVENT EXECUTION WHILE OF IS HANDLING A DATA HAZARD
-				IF_OF_Latch.setOF_busy(true);
-
-				//STATISTICS
-				OF_EX_Latch.incrementNumberOfCyclesOfOFStalls();
-			} 
-			else if (EX_MA_Latch.getCurrent_rd() == rs1 || EX_MA_Latch.getCurrent_rd() == rs2)
-			{
-				System.out.println("rd in MA = rs1/rs2 in OF");
-
-				OF_EX_Latch.setNop(true);
-				// IF_OF_Latch.setOF_enable(false);
-				IF_EnableLatch.setIF_enable(false);
-
-				//FOR STOPPING IF EVENT EXECUTION WHILE OF IS HANDLING A DATA HAZARD
-				IF_OF_Latch.setOF_busy(true);
-
-				//STATISTICS
-				OF_EX_Latch.incrementNumberOfCyclesOfOFStalls();
-
-			}
-			else if (MA_RW_Latch.getCurrent_rd() == rs1 || MA_RW_Latch.getCurrent_rd() == rs2)
-			{
-				System.out.println("rd in RW = rs1/rs2 in OF");
-
-				OF_EX_Latch.setNop(true);
-				// IF_OF_Latch.setOF_enable(false);
-				IF_EnableLatch.setIF_enable(false);
-
-				//FOR STOPPING IF EVENT EXECUTION WHILE OF IS HANDLING A DATA HAZARD
-				IF_OF_Latch.setOF_busy(true);
-
-				//STATISTICS
-				OF_EX_Latch.incrementNumberOfCyclesOfOFStalls();
-			}
-			else
-			{
-				System.out.println("No rd src conflict");
-
-				if(IF_EnableLatch.isIF_enable() == false)
-				{
-					//STATISTICS
-					// System.out.println("INCREMENTING NUMBER OF DATA HAZARDS");
-					OF_EX_Latch.incrementNumberOfDataHazards();
-				}
-
-				IF_EnableLatch.setIF_enable(true);
-				OF_EX_Latch.setNop(false);
-				// OF_EX_Latch.setRd(-1);
-
-				//FOR STOPPING IF EVENT EXECUTION WHILE OF IS HANDLING A DATA HAZARD
-				IF_OF_Latch.setOF_busy(false);
-			}
-			
-			if(opcode== 22) //load INSTRUCTIONS
-			{
-				// result = MA_RW_Latch.getLdResult();
-				//THE rd FOR load INSTRUCTION IS STORED IN instruction[11:15]
-				rd = (instruction << 10 & 0xf8000000) >>> 27;
-				// containingProcessor.getRegisterFile().setValue(rd, result);
-			}
-			else if(opcode == 24)
-			{
-				//jmp INSTRUCTIONS
-				//THE rd FOR jmp INSTRUCTION IS STORED IN instruction[6:10]
-				rd = (instruction << 5 & 0xf8000000) >>> 27;
-			}
-			else //THIS MEANS alu RESULT IS TO BE WRITTEN BACK
-			{
-				// result = MA_RW_Latch.getAluResult();
-				// System.out.println("RegisterWrite: opcode = " + opcode);
-				if (opcode >= 0 && opcode <= 21) {
-					if(opcode % 2 == 0) //R3 TYPE
-					{
-						//FOR R3-TYPE, THE rd FOR alu INSTRUCTION IS STORED IN instruction[16:20]
-						rd = (instruction << 15 & 0xf8000000) >>> 27;
-						// containingProcessor.getRegisterFile().setValue(rd, result);
+					if (BranchInstructions.contains(CO.name())) {
+						IF_EnableLatch.setIF_enable(false);
 					}
-					else //R2i TYPE
-					{
-						//FOR R2i-TYPE, THE rd FOR alu INSTRUCTION IS STORED IN instruction[11:15]
-						rd = (instruction << 10 & 0xf8000000) >>> 27;
-						// containingProcessor.getRegisterFile().setValue(rd, result);
+
+					switch (CO) {
+						case end:
+							IF_EnableLatch.setIF_enable(false);
+							break;
+
+						case jmp:
+							registerDestination = Integer.parseInt((binaryInstruction.substring(5, 10)),
+									2);
+							immediate = toInteger(binaryInstruction.substring(10, 32));
+							if (immediate != 0) {
+								jump.setOperandType(Operand.OperandType.Immediate);
+								jump.setValue(immediate);
+							} else {
+								jump.setOperandType(Operand.OperandType.Register);
+								jump.setValue(registerDestination);
+							}
+							CI.setDestinationOperand(jump);
+							break;
+						case slt:
+						case xor:
+						case div:
+						case sub:
+						case and:
+						case sll:
+						case srl:
+						case or:
+						case add:
+						case sra:
+						case mul:
+							rs1.setOperandType(Operand.OperandType.Register);
+							rs2.setOperandType(Operand.OperandType.Register);
+							rd.setOperandType(Operand.OperandType.Register);
+
+							String b1 = (binaryInstruction.substring(5, 10));
+							registerSource1 = Integer.parseInt(b1, 2);
+							rs1.setValue(registerSource1);
+
+							String b2 = (binaryInstruction.substring(10, 15));
+							registerSource2 = Integer.parseInt(b2, 2);
+							rs2.setValue(registerSource2);
+
+							String b3 = (binaryInstruction.substring(15, 20));
+							registerDestination = Integer.parseInt(b3, 2);
+							rd.setValue(registerDestination);
+
+							if (isDataHazard(registerSource1, registerSource2)) {
+								Statistics.setNumberOfOFUnitStalls(Statistics.getNumberOfOFUnitStalls() + 1);
+								this.conflictObserved();
+								break;
+							}
+
+							CI.setSourceOperand1(rs1);
+							CI.setSourceOperand2(rs2);
+							CI.setDestinationOperand(rd);
+							break;
+
+						case beq:
+						case bgt:
+						case blt:
+						case bne:
+							rs1.setOperandType(Operand.OperandType.Register);
+							rs2.setOperandType(Operand.OperandType.Register);
+							imm.setOperandType(Operand.OperandType.Immediate);
+
+							String S1 = (binaryInstruction.substring(5, 10));
+							registerSource1 = Integer.parseInt(S1, 2);
+							rs1.setValue(registerSource1);
+
+							String S2 = (binaryInstruction.substring(10, 15));
+							registerSource2 = Integer.parseInt(S2, 2);
+							rs2.setValue(registerSource2);
+
+							String S3 = binaryInstruction.substring(15, 32);
+							immediate = toInteger(S3);
+							imm.setValue(immediate);
+
+							if (isDataHazard(registerSource1, registerSource2)) {
+								Statistics.setNumberOfOFUnitStalls(Statistics.getNumberOfOFUnitStalls() + 1);
+								this.conflictObserved();
+								break;
+							}
+
+							CI.setSourceOperand1(rs1);
+							CI.setSourceOperand2(rs2);
+							CI.setDestinationOperand(imm);
+							break;
+						// below code till break corresponds to all remaining R2I type instructions
+						default:
+							rs1.setOperandType(Operand.OperandType.Register);
+							rd.setOperandType(Operand.OperandType.Register);
+							rs2.setOperandType(Operand.OperandType.Immediate);
+
+							String C1 = (binaryInstruction.substring(5, 10));
+							registerSource1 = Integer.parseInt(C1, 2);
+
+							String C2 = binaryInstruction.substring(15, 32);
+							immediate = toInteger(C2);
+
+							String C3 = (binaryInstruction.substring(10, 15));
+							registerDestination = Integer.parseInt(C3, 2);
+
+							rs1.setValue(registerSource1);
+							rs2.setValue(immediate);
+							rd.setValue(registerDestination);
+
+							if (isDataHazard(registerSource1, registerSource1)) {
+								Statistics.setNumberOfOFUnitStalls(Statistics.getNumberOfOFUnitStalls() + 1);
+								this.conflictObserved();
+								break;
+							}
+
+							CI.setSourceOperand1(rs1);
+							CI.setSourceOperand2(rs2);
+							CI.setDestinationOperand(rd);
+							break;
 					}
+
+					OF_EX_Latch.setInstruction(CI);
+					OF_EX_Latch.setEX_enable(true);
+
+					if (!OF_EX_Latch.isEX_Lock()) {
+						IF_OF_Latch.setOF_enable(false);
+					}
+
 				}
 			}
-			//DATA HAZARD (RAW) IDENTIFICATION - ENDS
-
-			if(OF_EX_Latch.isNop())
-			{
-				System.out.println("nop in EX - setting Rd for EX as -1");
-				OF_EX_Latch.setNext_rd(-1);
-			}
-			else
-			{
-				OF_EX_Latch.setNext_rd(rd);
-			}
-
-
-			//SETTING ENABLE LATCHES
-			// IF_OF_Latch.setOF_enable(false);
-			if(opcode == 29) {
-				IF_EnableLatch.setIF_enable(false);
-			}
-			OF_EX_Latch.setEX_enable(true);
-
-			// IF_OF_Latch.setOF_enable(false);
 		}
 	}
-
 }
