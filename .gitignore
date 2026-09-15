@@ -2,3 +2,6 @@
 *.class
 *.zip
 
+
+# ...but the coursework submission archives are content, not build output
+!coursework/*.zip
